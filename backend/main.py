@@ -29,6 +29,8 @@ daytona_runner.py / breaktrace_demo.py; this module only wires routing and
 HTTP concerns.
 """
 
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -149,13 +151,29 @@ def _active_application():
     return record
 
 
-# Allow the local Next.js dev server to call this API during development.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# CORS. Local development origins are always allowed so the Next.js dev
+# server can reach this API. The deployed frontend origin(s) are supplied via
+# FRONTEND_ORIGIN (a comma-separated list, e.g. https://breaktrace.vercel.app)
+# so production never needs a wildcard.
+#
+# We intentionally do NOT use allow_origins=["*"] in production.
+
+def _cors_origins() -> list[str]:
+    """Merge local dev origins with the FRONTEND_ORIGIN allowlist."""
+    origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-    ],
+    ]
+    for raw in os.getenv("FRONTEND_ORIGIN", "").split(","):
+        origin = raw.strip().rstrip("/")
+        if origin and origin not in origins:
+            origins.append(origin)
+    return origins
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )

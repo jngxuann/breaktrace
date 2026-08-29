@@ -2,7 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 
-const API_URL = "http://localhost:8000";
+// Deployment-safe backend URL. Local development defaults to the local
+// FastAPI server; set NEXT_PUBLIC_API_BASE_URL at build time in production
+// (e.g. on Vercel) to point at the deployed Render backend.
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 // The user-facing AI layer is branded "Nosana AI". Provider/model technical
 // strings from the backend are never rendered in the main UI.

@@ -1,0 +1,34 @@
+# Render Blueprint (IaaS "render.yaml") for the BreakTrace backend.
+#
+# Root cause of the backend is the `backend/` folder. Set the required
+# environment variables in the Render dashboard (or as envVars here) — never
+# commit real credentials.
+#
+# Required env vars (configure in the Render service):
+#   DAYTONA_API_KEY   - Daytona API key
+#   DAYTONA_API_URL   - Daytona API base URL (default https://app.daytona.io/api)
+#   DAYTONA_TARGET    - optional Daytona region/target
+#   AI_PROVIDER       - "nosana" (intended) or "groq"
+#   NOSANA_API_URL    - public HTTPS URL of the Nosana-hosted Ollama deployment
+#   NOSANA_MODEL      - exact Nosana/Ollama model name
+#   FRONTEND_ORIGIN   - the deployed Vercel origin (e.g. https://myapp.vercel.app)
+#   BREAKTRACE_DEMO_REPO_URL - public HTTPS URL of the regression-demo repo
+#
+# Opt-in (alternative AI provider for local/dev only):
+#   GROQ_API_KEY / GROQ_MODEL
+#
+# Runtime state: Security Memory + application registry are written to the
+# service's local filesystem (backend/data/*.json). That disk is NOT durable
+# on Render — it resets on restart/deploy. For this demo that is acceptable:
+# the regression-demo flow resets and rebuilds Security Memory within a single
+# inspection anyway.
+
+services:
+  - type: web
+    name: breaktrace-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /health

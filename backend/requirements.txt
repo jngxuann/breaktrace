@@ -1,0 +1,11 @@
+# BreakTrace backend production dependencies
+#
+# Versions mirror what is verified and working in backend/venv locally.
+# Install with: pip install -r requirements.txt
+
+fastapi==0.141.1
+uvicorn==0.52.4
+pydantic==2.13.4
+python-dotenv==1.2.3
+httpx==0.28.1
+daytona==0.205.1
