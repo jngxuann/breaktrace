@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "applications": [
+    {
+      "target_id": "226e3716b84b7b4703ef2750e9582171c10c8980612760d8d86a80046fb2db67",
+      "origin": "https://juice-shop.local",
+      "display_name": "juice-shop.local",
+      "created_at": "2026-08-28T13:57:59.971727+00:00",
+      "last_assessed_at": null,
+      "assessment_count": 0
+    },
+    {
+      "target_id": "22d9c4008f1780ac1f5c90f3b3e2b7ea33d2a5f3077244797815cd1972c2b35d",
+      "origin": "https://cybersafe-jarss-user-app.vercel.app",
+      "display_name": "cybersafe-jarss-user-app.vercel.app",
+      "created_at": "2026-08-28T14:32:04.350795+00:00",
+      "last_assessed_at": "2026-08-29T06:13:11.317915+00:00",
+      "assessment_count": 4
+    },
+    {
+      "target_id": "547f06f0aaa11341e9ce81f957700ef75b0e687f2dd4c33e99a5bce2657bb804",
+      "origin": "https://breaktrace-regression-demo.example",
+      "display_name": "breaktrace-regression-demo.example",
+      "created_at": "2026-08-29T05:04:05.786117+00:00",
+      "last_assessed_at": "2026-08-29T06:58:45.029298+00:00",
+      "assessment_count": 10
+    },
+    {
+      "target_id": "996e1f714b08e971ec79e3bea686287e66441f043177999a13dbc546d8fe402a",
+      "origin": "https://github.com",
+      "display_name": "github.com",
+      "created_at": "2026-08-29T06:14:13.373745+00:00",
+      "last_assessed_at": null,
+      "assessment_count": 0
+    }
+  ]
+}
