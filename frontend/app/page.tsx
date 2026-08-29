@@ -624,6 +624,141 @@ async function inspectApplication(
 }
 
 // ---------------------------------------------------------------------------
+// Shared UI primitives
+// ---------------------------------------------------------------------------
+
+const CARD = "rounded-xl border border-slate-200 bg-white shadow-sm";
+const EYEBROW = "text-xs font-semibold uppercase tracking-wide";
+
+function Brand({ size = "md" }: { size?: "md" | "lg" }) {
+  return (
+    <span className="inline-flex items-center gap-2.5 text-slate-900">
+      <span
+        className={`grid place-items-center rounded-md bg-indigo-600 text-white ${
+          size === "lg" ? "h-9 w-9" : "h-7 w-7"
+        }`}
+      >
+        <svg
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className={size === "lg" ? "h-5 w-5" : "h-4 w-4"}
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 1a9 9 0 0 0-5.5 1.8A8.97 8.97 0 0 0 1.7 9.2a9 9 0 0 0 2.6 6.2A9 9 0 0 0 10 19a9 9 0 0 0 5.7-3.6A8.97 8.97 0 0 0 18.3 9.2 9 9 0 0 0 10 1Zm3.7 6.7a.75.75 0 0 0-1.4-.5l-2.4 4-1.3-1.2a.75.75 0 1 0-1 1.1l2.1 2a.75.75 0 0 0 1.2-.1l3-5Z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </span>
+      <span
+        className={`font-bold tracking-tight ${
+          size === "lg" ? "text-2xl" : "text-lg"
+        }`}
+      >
+        BreakTrace
+      </span>
+    </span>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  children,
+}: {
+  eyebrow?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mb-3">
+      {eyebrow && (
+        <p className={`${EYEBROW} text-slate-400`}>{eyebrow}</p>
+      )}
+      <h2 className="text-lg font-semibold text-slate-900">{children}</h2>
+    </div>
+  );
+}
+
+// Compact professional status/severity chips. Emoji-free; color + text only.
+function Chip({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "green" | "red" | "amber" | "slate" | "blue" | "violet";
+}) {
+  const styles: Record<string, string> = {
+    green: "bg-green-50 text-green-700 border-green-200",
+    red: "bg-red-50 text-red-700 border-red-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    slate: "bg-slate-50 text-slate-600 border-slate-200",
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    violet: "bg-violet-50 text-violet-700 border-violet-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${styles[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const s = severity.toLowerCase();
+  const tone = s === "high" ? "red" : s === "medium" ? "amber" : "slate";
+  return <Chip tone={tone}>{severity.toUpperCase()}</Chip>;
+}
+
+function StatusGlyph({
+  status,
+  size = 16,
+}: {
+  status: "done" | "error" | "running" | "skipped" | "pending";
+  size?: number;
+}) {
+  if (status === "running") {
+    return (
+      <span
+        style={{ width: size, height: size }}
+        className="inline-block animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600"
+      />
+    );
+  }
+  const color =
+    status === "done"
+      ? "text-green-600"
+      : status === "error"
+        ? "text-red-600"
+        : status === "skipped"
+          ? "text-slate-300"
+          : "text-slate-200";
+  return (
+    <span style={{ width: size, height: size }} className={`${color} inline-flex items-center justify-center`}>
+      {status === "done" ? (
+        <svg viewBox="0 0 16 16" fill="none" style={{ width: size, height: size }}>
+          <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15" />
+          <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : status === "error" ? (
+        <svg viewBox="0 0 16 16" fill="none" style={{ width: size, height: size }}>
+          <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15" />
+          <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      ) : status === "skipped" ? (
+        <svg viewBox="0 0 16 16" fill="none" style={{ width: size, height: size }}>
+          <circle cx="8" cy="8" r="7" fill="currentColor" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 16 16" fill="none" style={{ width: size, height: size }}>
+          <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Landing + inspection progress
 // ---------------------------------------------------------------------------
 
@@ -640,72 +775,88 @@ function LandingView({
   busy: boolean;
   error: string | null;
 }) {
+  const pipeline = [
+    { label: "Application", tone: "slate" as const },
+    { label: "Daytona Security Twin", tone: "slate" as const },
+    { label: AI_LABEL, tone: "violet" as const },
+    { label: "Security Memory", tone: "violet" as const },
+    { label: "Regression Detection", tone: "slate" as const },
+  ];
   return (
-    <div className="flex w-full max-w-xl flex-col items-center gap-10 py-24 text-center">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="font-mono text-6xl font-bold tracking-tight text-zinc-100">
-          BreakTrace
+    <div className="flex w-full flex-1 flex-col items-center justify-center px-6 py-20">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Brand size="lg" />
+        <h1 className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900">
+          Security regression testing that remembers what broke.
         </h1>
-        <p className="font-mono text-sm text-emerald-400">
-          &ldquo;Find vulnerabilities. Turn them into tests. Keep them from
-          coming back.&rdquo;
+        <p className="max-w-xl text-sm leading-relaxed text-slate-500">
+          Enter an application URL. BreakTrace inspects it in an isolated
+          security twin and turns verified failures into regression tests.
         </p>
       </div>
 
       <form
-        className="flex w-full flex-col gap-3"
+        className="mt-10 w-full max-w-3xl"
         onSubmit={(e) => {
           e.preventDefault();
           if (url.trim()) onSubmit();
         }}
       >
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com"
-          disabled={busy}
-          className="h-14 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={busy || !url.trim()}
-          className="h-14 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-8 font-mono text-base font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {busy ? "Inspecting..." : "Inspect Application"}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 10h8m0 0l-3-3m3 3l-3 3M14 5h2a1 1 0 011 1v8a1 1 0 01-1 1h-2"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com"
+              disabled={busy}
+              className="h-14 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 font-mono text-[15px] text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={busy || !url.trim()}
+            className="h-14 shrink-0 rounded-xl bg-indigo-600 px-8 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busy ? "Inspecting..." : "Inspect Application"}
+          </button>
+        </div>
       </form>
 
-      <p className="font-mono text-xs text-zinc-500">
-        Enter an application URL. BreakTrace will inspect it in an isolated
-        security twin.
-      </p>
-
-      <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[10px] text-zinc-600">
-        <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
-          Application
-        </span>
-        <span>→</span>
-        <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
-          Daytona Security Twin
-        </span>
-        <span>→</span>
-        <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2 py-1 text-violet-300">
-          {AI_LABEL} Analysis
-        </span>
-        <span>→</span>
-        <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
-          BreakTrace Security Memory
-        </span>
-        <span>→</span>
-        <span className="rounded-sm border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
-          Regression Detection
-        </span>
+      <div className="mt-9 flex flex-wrap items-center justify-center gap-2">
+        {pipeline.map((step, i) => (
+          <span key={step.label} className="flex items-center gap-2">
+            {i > 0 && <span className="text-slate-300">→</span>}
+            <span
+              className={`rounded-md border bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ${
+                step.tone === "violet" ? "border-violet-200 text-violet-700" : "border-slate-200"
+              }`}
+            >
+              {step.label}
+            </span>
+          </span>
+        ))}
       </div>
 
       {error && (
-        <div className="w-full rounded-md border border-red-500/40 bg-red-950/40 p-4 font-mono text-sm text-red-300">
-          <p className="mb-1 font-semibold text-red-400">Inspection Error</p>
-          <p className="whitespace-pre-wrap break-words">{error}</p>
+        <div className="mt-8 w-full max-w-3xl rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-semibold text-red-700">Inspection Error</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-red-600">
+            {error}
+          </p>
         </div>
       )}
     </div>
@@ -714,60 +865,64 @@ function LandingView({
 
 function InspectionProgress({ stages }: { stages: InspectionStage[] }) {
   return (
-    <div className="flex w-full max-w-xl flex-col items-center gap-8 py-24">
-      <p className="font-mono text-xl font-bold text-zinc-100">
-        Inspecting Application
-      </p>
-      <p className="font-mono text-xs text-zinc-500">
-        Running inside an isolated Daytona Security Twin — never against the
-        live URL.
-      </p>
-      <div className="flex w-full flex-col gap-2">
-        {stages.map((stage) => {
-          const icon =
-            stage.status === "done"
-              ? "✅"
-              : stage.status === "error"
-                ? "❌"
-                : stage.status === "skipped"
-                  ? "—"
-                  : stage.status === "running"
-                    ? "⏳"
-                    : "○";
-          const color =
-            stage.status === "done"
-              ? "text-emerald-400"
-              : stage.status === "error"
-                ? "text-red-400"
-                : stage.status === "skipped"
-                  ? "text-zinc-600"
-                  : stage.status === "running"
-                    ? "text-violet-300"
-                    : "text-zinc-600";
-          return (
-            <div
-              key={stage.key}
-              className="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3"
+    <div className="mx-auto w-full max-w-2xl py-20">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <h2 className="text-xl font-semibold text-slate-900">
+          Inspecting Application
+        </h2>
+        <p className="text-sm text-slate-500">
+          Running inside an isolated Daytona Security Twin — never against the
+          live URL.
+        </p>
+      </div>
+
+      <div className="mt-8 flex flex-col gap-2.5">
+        {stages.map((stage, index) => (
+          <div
+            key={stage.key}
+            className={`flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm transition-colors ${
+              stage.status === "running"
+                ? "border-indigo-200 ring-4 ring-indigo-50"
+                : stage.status === "error"
+                  ? "border-red-200"
+                  : "border-slate-200"
+            }`}
+          >
+            <div className="flex h-6 w-6 items-center justify-center">
+              <StatusGlyph status={stage.status} />
+            </div>
+            <span
+              className={`text-sm font-medium ${
+                stage.status === "skipped" ? "text-slate-400" : "text-slate-800"
+              }`}
             >
-              <span className={`w-6 font-mono text-sm ${color}`}>{icon}</span>
-              <span className={`font-mono text-sm ${color}`}>
-                {stage.label}
-              </span>
-              {stage.status === "running" && (
-                <span className="ml-auto h-2 w-2 animate-pulse rounded-full bg-violet-400" />
-              )}
-              {stage.detail && stage.status !== "running" && (
-                <span className="ml-auto truncate font-mono text-[11px] text-zinc-500">
+              {index + 1}. {stage.label}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              {stage.detail && stage.status !== "running" ? (
+                <span className="truncate font-mono text-[11px] text-slate-500">
                   {stage.detail}
+                </span>
+              ) : (
+                stage.status === "pending" && (
+                  <span className="text-[11px] text-slate-400">queued</span>
+                )
+              )}
+              {stage.status === "running" && (
+                <span
+                  className="animate-pulse rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600"
+                >
+                  Working…
                 </span>
               )}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
-      <p className="font-mono text-[11px] text-zinc-600">
+
+      <p className="mt-5 text-center text-xs text-slate-400">
         Stages complete only when the corresponding backend response returns —
-        nothing is shown as finished early.
+        nothing is shown as complete early.
       </p>
     </div>
   );
@@ -777,254 +932,295 @@ function InspectionProgress({ stages }: { stages: InspectionStage[] }) {
 // Result view — the consolidated report, all values derived from real data
 // ---------------------------------------------------------------------------
 
-function Metric({
+function MetricCard({
   label,
   value,
-  tone = "default",
+  hint,
+  accent,
 }: {
   label: string;
-  value: number | string;
-  tone?: "default" | "red" | "green" | "amber";
+  value: string;
+  hint?: string;
+  accent: "blue" | "violet" | "green" | "red";
 }) {
-  const color =
-    tone === "red"
-      ? "text-red-400"
-      : tone === "green"
-        ? "text-emerald-400"
-        : tone === "amber"
-          ? "text-amber-400"
-          : "text-zinc-100";
+  const accents = {
+    blue: { text: "text-blue-600", bar: "bg-blue-600" },
+    violet: { text: "text-violet-600", bar: "bg-violet-600" },
+    green: { text: "text-green-600", bar: "bg-green-600" },
+    red: { text: "text-red-600", bar: "bg-red-600" },
+  } as const;
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-950 p-4 text-center">
-      <p className={`font-mono text-3xl font-bold ${color}`}>{value}</p>
-      <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-        {label}
-      </p>
+    <div className={`${CARD} p-4`}>
+      <p className={`${EYEBROW} text-slate-400`}>{label}</p>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className={`text-3xl font-bold tracking-tight ${accents[accent].text}`}>
+          {value}
+        </span>
+        {hint && <span className="font-mono text-xs text-slate-500">{hint}</span>}
+      </div>
+      <span className={`mt-3 block h-1 w-10 rounded-full ${accents[accent].bar}`} />
     </div>
   );
 }
 
-function ResultBanner({ run }: { run: InspectionRun }) {
-  const regressions = run.regression?.assessment.regression;
-  const fixed = run.fixed?.assessment.regression;
-  const baselineReg = run.baseline?.assessment.regression;
-  const newFindings = run.baseline?.assessment.summary.new_verified_findings ?? 0;
-
-  let title = "INSPECTION COMPLETE";
-  let subtitle = "No security regression detected.";
-  let tone = "border-zinc-700 bg-zinc-950";
-  let text = "text-zinc-100";
-
-  if (regressions && regressions.regressions > 0) {
-    title = "🚨 SECURITY REGRESSION DETECTED";
-    subtitle =
-      "Previously fixed security conditions have returned. Security Memory caught them.";
-    tone = "border-red-500 bg-red-500/10";
-    text = "text-red-400";
-  } else if (fixed && fixed.tests_replayed > 0 && fixed.regressions === 0) {
-    title = "🟢 FIX VERIFIED";
-    subtitle =
-      "BreakTrace replayed the previously discovered security tests against the fixed application.";
-    tone = "border-emerald-500 bg-emerald-500/10";
-    text = "text-emerald-400";
-  } else if (newFindings > 0) {
-    title = "🔴 VULNERABILITIES FOUND";
-    subtitle = "BreakTrace verified real security failures in this application.";
-    tone = "border-red-500/60 bg-red-950/40";
-    text = "text-red-400";
-  } else if (baselineReg && baselineReg.tests_replayed > 0 && baselineReg.regressions === 0) {
-    title = "🟢 SECURITY MEMORY REPLAYED";
-    subtitle = "Stored Security Memory tests held — no regressions found.";
-    tone = "border-emerald-500/60 bg-emerald-950/40";
-    text = "text-emerald-400";
-  }
-
+// Overall status alert card. Red is used sparingly (only for regression).
+function OverallStatus({
+  status,
+}: {
+  status: {
+    tone: "detect" | "verify" | "discover" | "neutral";
+    title: string;
+    message: string;
+    detail?: string;
+  };
+}) {
+  const styles = {
+    detect: {
+      wrap: "border-red-200 bg-red-50",
+      iconWrap: "bg-red-100 text-red-600",
+      title: "text-slate-900",
+      message: "text-red-700",
+      detail: "text-red-600/80",
+    },
+    verify: {
+      wrap: "border-green-200 bg-green-50",
+      iconWrap: "bg-green-100 text-green-600",
+      title: "text-slate-900",
+      message: "text-green-700",
+      detail: "text-green-600/80",
+    },
+    discover: {
+      wrap: "border-blue-200 bg-blue-50",
+      iconWrap: "bg-blue-100 text-blue-600",
+      title: "text-slate-900",
+      message: "text-blue-700",
+      detail: "text-blue-600/80",
+    },
+    neutral: {
+      wrap: "border-slate-200 bg-white",
+      iconWrap: "bg-indigo-50 text-indigo-600",
+      title: "text-slate-900",
+      message: "text-slate-600",
+      detail: "text-slate-500",
+    },
+  } as const;
+  const s = styles[status.tone];
   return (
-    <div className={`w-full rounded-md border-2 p-6 ${tone}`}>
-      <p className="text-center font-mono text-xs uppercase tracking-widest text-zinc-500">
-        INSPECTION COMPLETE
-      </p>
-      <p className={`mt-2 text-center font-mono text-2xl font-black tracking-tight ${text}`}>
-        {title}
-      </p>
-      <p className="mt-2 text-center font-mono text-sm leading-relaxed text-zinc-400">
-        {subtitle}
-      </p>
+    <div className={`flex items-start gap-4 rounded-xl border p-5 ${s.wrap}`}>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${s.iconWrap}`}>
+        {status.tone === "detect" ? (
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+            <path fillRule="evenodd" d="M8.5 3a1.5 1.5 0 0 0-1.06.44L2.44 8.44A1.5 1.5 0 0 0 2 9.5v1.06c0 .4.16.78.44 1.06l5 5A1.5 1.5 0 0 0 8.5 17h1.06c.4 0 .78-.16 1.06-.44l5-5a1.5 1.5 0 0 0 .44-1.06V9.5c0-.4-.16-.78-.44-1.06l-5-5A1.5 1.5 0 0 0 9.56 3H8.5Zm3.7 4.2a.75.75 0 1 1 1.1 1.02l-4 4.3a.75.75 0 0 1-1.1.02L6.2 10.4a.75.75 0 1 1 1.1-1.02l1.1 1.2 3.8-4.38Z" clipRule="evenodd" />
+          </svg>
+        ) : status.tone === "verify" ? (
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.86-9.13a.75.75 0 0 0-1.22-.87l-2.8 3.9-1.4-1.4a.75.75 0 1 0-1.06 1.06l2 2a.75.75 0 0 0 1.13-.06l3.35-4.63Z" clipRule="evenodd" />
+          </svg>
+        ) : status.tone === "discover" ? (
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+            <path fillRule="evenodd" d="M4.25 3A2.25 2.25 0 0 0 2 5.25v9.5A2.25 2.25 0 0 0 4.25 17h11.5A2.25 2.25 0 0 0 18 14.75v-9.5A2.25 2.25 0 0 0 15.75 3H4.25Zm2.3 3.7a.75.75 0 1 0-1.1 1.02l1.3 1.28-1.3 1.28a.75.75 0 1 0 1.1 1.02l1.34-1.31a.75.75 0 0 0 0-1.06L6.55 6.7Zm4.2 0a.75.75 0 0 1 0 1.06l-1 1a.75.75 0 1 1-1.5 0l1-1a.75.75 0 0 1 1.5 0Zm2.25 1.55a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 1a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm.75 5.75a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 .63.74l2.5.5a.75.75 0 1 0 .24-1.48l-1.87-.37V6.75Z" clipRule="evenodd" />
+          </svg>
+        )}
+      </span>
+      <div className="min-w-0">
+        <h3 className={`text-lg font-semibold ${s.title}`}>{status.title}</h3>
+        <p className={`mt-0.5 text-sm font-medium ${s.message}`}>{status.message}</p>
+        {status.detail && (
+          <p className={`mt-1 text-sm ${s.detail}`}>{status.detail}</p>
+        )}
+      </div>
     </div>
   );
 }
 
-function LifecycleStory({ run }: { run: InspectionRun }) {
-  const baseline = run.baseline?.assessment;
-  const fixedReg = run.fixed?.assessment.regression;
-  const regressionReg = run.regression?.assessment.regression;
-  const newFindings = baseline?.summary.new_verified_findings ?? 0;
-  const savedCount = run.saved?.new ?? 0;
-  const memoryTotal = run.memory?.total ?? 0;
-  const remembered = savedCount > 0 ? savedCount : memoryTotal;
-  const verifiedFindings = baseline?.findings.filter(
-    (f) => f.status === "verified",
-  ) ?? [];
-  const crossUserFindings = verifiedFindings.filter((f) => {
+function LifecycleStepper({
+  steps,
+}: {
+  steps: {
+    label: string;
+    value: string;
+    caption: string;
+    accent: "blue" | "violet" | "green" | "red";
+  }[];
+}) {
+  const accents = {
+    blue: "bg-blue-600 border-blue-600 text-white",
+    violet: "bg-violet-600 border-violet-600 text-white",
+    green: "bg-green-600 border-green-600 text-white",
+    red: "bg-red-600 border-red-600 text-white",
+  } as const;
+  return (
+    <div className={`${CARD} p-5`}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-900">
+          BreakTrace lifecycle
+        </h3>
+        <span className="text-xs text-slate-400">
+          Find → Remember → Verify → Detect
+        </span>
+      </div>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, i) => (
+          <div key={step.label} className="flex items-start gap-4 sm:flex-col sm:gap-3">
+            <div className="flex items-center gap-3 lg:flex-1">
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 font-mono text-sm font-bold ${accents[step.accent]}`}
+              >
+                {i + 1}
+              </span>
+              {i < steps.length - 1 && (
+                <span className="hidden flex-1 lg:block">
+                  <span className="block h-px w-full bg-slate-200" />
+                </span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className={`${EYEBROW} ${accentLabel(step.accent)}`}>{step.label}</p>
+              <p className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">
+                {step.value}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                {step.caption}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function accentLabel(accent: "blue" | "violet" | "green" | "red") {
+  return {
+    blue: "text-blue-600",
+    violet: "text-violet-600",
+    green: "text-green-600",
+    red: "text-red-600",
+  }[accent];
+}
+
+// Side-by-side Fix Verification vs Regression Detection
+function ReplayRow({ item }: { item: RegressionReplayResult }) {
+  const reg = item.status === "regression";
+  const isError = item.status === "error";
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2.5 ${
+        reg ? "border-red-100 bg-red-50/50" : "border-slate-200 bg-white"
+      }`}
+    >
+      <span className="w-12 shrink-0 font-mono text-xs font-semibold text-slate-700">
+        {item.entry_id}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+        {item.title}
+      </span>
+      <span className="font-mono text-xs text-slate-600">
+        {item.expected_status}
+        <span className="text-slate-400"> → </span>
+        <span className={reg ? "font-semibold text-red-600" : "text-slate-800"}>
+          {item.observed_status != null ? item.observed_status : "n/a"}
+        </span>
+      </span>
+      <Chip tone={reg ? "red" : isError ? "amber" : "green"}>
+        {reg ? "Regression" : isError ? "Error" : "Passed"}
+      </Chip>
+    </div>
+  );
+}
+
+function ReplayPanel({
+  title,
+  variant,
+  results,
+  replayed,
+  passed,
+  regressions,
+}: {
+  title: string;
+  variant: "fixed" | "regression";
+  results: RegressionReplayResult[];
+  replayed: number;
+  passed: number;
+  regressions: number;
+}) {
+  const isFixed = variant === "fixed";
+  const tone = isFixed ? "green" : "red";
+  const badge = isFixed
+    ? `${passed} / ${replayed} passed`
+    : regressions > 0
+      ? `${regressions} regression${regressions === 1 ? "" : "s"}`
+      : "No regressions";
+  const emptyText = isFixed
+    ? "No fix-verification replay is available. Security Memory has not been replayed against a fixed version."
+    : "No regression replay is available. Security Memory tests found nothing to replay for this stage.";
+
+  return (
+    <div className={`${CARD} overflow-hidden`}>
+      <div
+        className={`flex items-center justify-between gap-3 border-b px-5 py-4 ${
+          isFixed ? "border-green-100 bg-green-50/60" : "border-red-100 bg-red-50/60"
+        }`}
+      >
+        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+        {replayed > 0 && (
+          <Chip tone={tone}>
+            {badge}
+          </Chip>
+        )}
+      </div>
+      <div className="p-4">
+        {replayed === 0 || results.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+            {emptyText}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {results.map((item) => {
+              const replayKey = `${item.entry_id}-${item.method}-${item.path}`;
+              return <ReplayRow key={replayKey} item={item} />;
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Verified findings: important cross-user findings get cards; others a list.
+function crossUserOf(findings: SecurityFinding[]): SecurityFinding[] {
+  return findings.filter((f) => {
     const ev = f.evidence as Record<string, unknown>;
     return ev["cross_user_access"] === true;
   });
-  const crossUser = crossUserFindings.length > 0;
-  // Count real cross-user findings when the assessment produced them (the
-  // demo story); otherwise fall back to all verified findings so normal
-  // applications keep their real counts.
-  const verifiedCount = crossUser
-    ? crossUserFindings.length
-    : verifiedFindings.length;
+}
 
-  const steps: {
-    label: string;
-    caption: string;
-    tone: "red" | "green" | "zinc" | "amber";
-    value?: string;
-  }[] = [
-    {
-      label: "DISCOVER",
-      caption: crossUser
-        ? "Cross-user access vulnerability found"
-        : newFindings > 0
-          ? `${verifiedCount} verified security finding${verifiedCount === 1 ? "" : "s"}`
-          : "No verified vulnerability discovered",
-      tone: newFindings > 0 ? "red" : "zinc",
-      value: newFindings > 0 ? `${verifiedCount}` : "0",
-    },
-    {
-      label: "REMEMBER",
-      caption:
-        remembered > 0
-          ? `${remembered} verified BreakTrace${remembered === 1 ? "" : "s"} saved to Security Memory`
-          : "Nothing to remember yet",
-      tone: remembered > 0 ? "amber" : "zinc",
-      value: remembered > 0 ? `${remembered}` : "0",
-    },
-    {
-      label: "VERIFY",
-      caption:
-        fixedReg && fixedReg.tests_replayed > 0
-          ? `Stored tests replayed after fix — ${fixedReg.passed} / ${fixedReg.tests_replayed} passed`
-          : run.baseline?.assessment.regression.tests_replayed
-            ? `Stored tests replayed — ${run.baseline.assessment.regression.passed} / ${run.baseline.assessment.regression.tests_replayed} passed`
-            : "No fix verification available",
-      tone:
-        fixedReg && fixedReg.regressions === 0 && fixedReg.tests_replayed > 0
-          ? "green"
-          : "zinc",
-      value:
-        fixedReg && fixedReg.tests_replayed > 0
-          ? `${fixedReg.passed}/${fixedReg.tests_replayed}`
-          : run.baseline?.assessment.regression.tests_replayed
-            ? `${run.baseline.assessment.regression.passed}/${run.baseline.assessment.regression.tests_replayed}`
-            : "—",
-    },
-    {
-      label: "DETECT",
-      caption:
-        regressionReg && regressionReg.regressions > 0
-          ? `Same tests replayed again — ${regressionReg.regressions} regression${regressionReg.regressions === 1 ? "" : "s"} detected`
-          : run.baseline?.assessment.regression.regressions
-            ? `${run.baseline.assessment.regression.regressions} regression${run.baseline.assessment.regression.regressions === 1 ? "" : "s"} detected on replay`
-            : "No regression detected",
-      tone:
-        (regressionReg && regressionReg.regressions > 0) ||
-        (run.baseline?.assessment.regression.regressions ?? 0) > 0
-          ? "red"
-          : "green",
-      value:
-        regressionReg
-          ? `${regressionReg.regressions}`
-          : `${run.baseline?.assessment.regression.regressions ?? 0}`,
-    },
-  ];
-
+function FindingEvidence({ finding }: { finding: SecurityFinding }) {
+  const ev = finding.evidence as Record<string, unknown>;
   return (
-    <div className="w-full rounded-md border border-violet-500/40 bg-zinc-950 p-5">
-      <div className="flex items-center justify-between gap-4">
-        <p className="font-mono text-xs uppercase tracking-widest text-violet-400">
-          BREAKTRACE LIFECYCLE
+    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+      {finding.description && (
+        <p className="text-sm leading-relaxed text-slate-600">{finding.description}</p>
+      )}
+      <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-slate-50 p-3 font-mono text-[11px] leading-relaxed text-slate-600">
+        {JSON.stringify(ev, null, 2)}
+      </pre>
+      {finding.remediation && (
+        <p className="text-xs text-slate-500">
+          <span className="font-semibold text-slate-600">Remediation:</span>{" "}
+          {finding.remediation}
         </p>
-        <p className="font-mono text-[11px] text-emerald-400">
-          Find → Remember → Verify → Detect
-        </p>
-      </div>
-      <div className="mt-4 flex flex-col gap-3">
-        {steps.map((step, i) => {
-          const color =
-            step.tone === "red"
-              ? "border-red-500/50 bg-red-500/10 text-red-400"
-              : step.tone === "green"
-                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                : step.tone === "amber"
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                  : "border-zinc-700 bg-black/40 text-zinc-400";
-          return (
-            <div key={step.label} className="flex flex-col gap-2">
-              <div
-                className={`flex items-center justify-between gap-3 rounded-md border px-4 py-3 ${color}`}
-              >
-                <span className="font-mono text-sm font-bold">
-                  {step.label}
-                </span>
-                <span className="font-mono text-lg font-black">
-                  {step.value}
-                </span>
-              </div>
-              <p className="px-1 font-mono text-[11px] text-zinc-400">
-                {step.caption}
-              </p>
-              {i < steps.length - 1 && (
-                <p className="px-1 text-center font-mono text-zinc-600">↓</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-center font-mono text-xs leading-relaxed text-zinc-500">
-        BreakTrace found a vulnerability, remembered it, verified the fix, and
-        caught it when it came back.
-      </p>
+      )}
     </div>
   );
 }
 
-function VulnerabilityCard({ finding }: { finding: SecurityFinding }) {
+function CrossUserCard({ finding }: { finding: SecurityFinding }) {
   const ev = finding.evidence as Record<string, unknown>;
-  const crossUser = ev["cross_user_access"] === true;
-  if (!crossUser) {
-    return (
-      <div className="w-full rounded-md border border-red-500/40 bg-red-950/30 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-red-400">
-              VERIFIED FINDING · {finding.category.replace(/_/g, " ")}
-            </p>
-            <h3 className="mt-1 font-mono text-lg font-bold text-zinc-100">
-              {finding.title}
-            </h3>
-          </div>
-          <span className="rounded-sm border border-red-500/50 bg-red-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-red-400">
-            {finding.severity.toUpperCase()}
-          </span>
-        </div>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-          {finding.description}
-        </p>
-        <details className="mt-3 rounded-md border border-zinc-800 bg-black/40">
-          <summary className="cursor-pointer select-none px-3 py-2 font-mono text-xs font-semibold text-zinc-300">
-            Technical Evidence
-          </summary>
-          <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words border-t border-zinc-800 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-400">
-            {JSON.stringify(finding.evidence, null, 2)}
-          </pre>
-        </details>
-      </div>
-    );
-  }
-
   const request = (ev["request"] as { method?: string; path?: string }) || {};
   const principalLabel =
     typeof ev["principal_label"] === "string"
@@ -1036,105 +1232,86 @@ function VulnerabilityCard({ finding }: { finding: SecurityFinding }) {
       : `owner ${ev["resource_owner"] ?? "?"}`;
   const method = request.method || "GET";
   const tdPath = finding.test_definition?.["path"];
-  const path =
-    request.path ||
-    (typeof tdPath === "string" ? tdPath : "") ||
-    "";
+  const path = request.path || (typeof tdPath === "string" ? tdPath : "") || "";
   const expected =
     typeof ev["expected_status"] === "number" ? ev["expected_status"] : undefined;
   const observed =
     typeof ev["observed_status"] === "number" ? ev["observed_status"] : undefined;
-  const headers =
-    (ev["request_headers"] as Record<string, string> | undefined) || {};
+  const headers = (ev["request_headers"] as Record<string, string> | undefined) || {};
   const safeHeaders = Object.entries(headers).filter(
     ([name]) => !/authorization|cookie|token|session|secret|api[-_]?key/i.test(name),
   );
 
   return (
-    <div className="w-full rounded-md border border-red-500/40 bg-red-950/30">
-      <div className="border-b border-red-500/30 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-red-400">
+    <div className={`${CARD} overflow-hidden`}>
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className={`${EYEBROW} text-slate-400`}>
               {finding.category.replace(/_/g, " ")}
             </p>
-            <h3 className="mt-1 font-mono text-xl font-bold text-zinc-100">
+            <h4 className="mt-1 text-lg font-semibold text-slate-900">
               {finding.title}
-            </h3>
+            </h4>
           </div>
-          <span className="rounded-sm border border-red-500/50 bg-red-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-red-400">
-            {finding.severity.toUpperCase()}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <SeverityBadge severity={finding.severity} />
+          </div>
         </div>
       </div>
-      <div className="p-5">
-        <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
-          <span className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200">
+
+      <div className="px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-xs text-slate-700">
             {principalLabel}
           </span>
-          <span className="text-zinc-500">↓</span>
-          <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-300">
-            {method} {path}
+          <span className="text-slate-400">↓</span>
+          <span className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 font-mono text-xs font-semibold text-blue-700">
+            {method} {path || "…"}
           </span>
-          <span className="text-zinc-500">↓</span>
-          <span className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-300">
-            {ownerLabel}&apos;s {path.split("/").filter(Boolean).pop() || "resource"}
+          <span className="text-slate-400">↓</span>
+          <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-xs text-slate-700">
+            {ownerLabel}&apos;{path ? ` ${path.split("/").filter(Boolean).pop()}` : " resource"}
           </span>
         </div>
 
-        <div className="mt-3 grid gap-3 font-mono text-sm sm:grid-cols-2">
-          <div className="rounded-md border border-zinc-800 bg-black/40 p-3">
-            <p className="text-[11px] uppercase tracking-widest text-zinc-500">
-              Expected
-            </p>
-            <p className="mt-1 font-semibold text-zinc-200">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className={`${EYEBROW} text-slate-400`}>Expected</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-slate-700">
               {expected != null ? `${expected} ${statusLabel(expected)}` : "—"}
             </p>
           </div>
-          <div className="rounded-md border border-red-500/40 bg-red-950/40 p-3">
-            <p className="text-[11px] uppercase tracking-widest text-zinc-500">
-              Observed
-            </p>
-            <p className="mt-1 font-semibold text-red-300">
+          <div className="rounded-lg border border-red-200 bg-red-50/60 p-3">
+            <p className={`${EYEBROW} text-red-400`}>Observed</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-red-600">
               {observed != null ? `${observed} ${statusLabel(observed)}` : "—"}
             </p>
           </div>
         </div>
 
-        <p className="mt-3 rounded-sm border border-red-500/40 bg-red-950/40 px-2 py-1 font-mono text-[12px] font-bold text-red-300">
-          Cross-user access verified: a different user received a resource they
-          should not own.
-        </p>
+        <div className="mt-3">
+          <Chip tone="green">Verified vulnerability</Chip>
+        </div>
 
-        <details className="mt-3 rounded-md border border-zinc-800 bg-black/40">
-          <summary className="cursor-pointer select-none px-3 py-2 font-mono text-xs font-semibold text-zinc-300">
+        <details className="mt-3">
+          <summary className="cursor-pointer select-none text-sm font-medium text-indigo-600 hover:text-indigo-700">
             Technical Evidence
           </summary>
-          <div className="space-y-1 border-t border-zinc-800 px-3 py-2 font-mono text-[11px] text-zinc-400">
+          <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-500">
             <p>Request method: {method}</p>
             <p>Request path: {path}</p>
             {safeHeaders.map(([name, value]) => (
               <p key={name}>
-                Request header:{" "}
-                <span className="text-zinc-200">
-                  {name}: {value}
-                </span>
+                Request header: <span className="text-slate-700">{name}: {value}</span>
               </p>
             ))}
-            <p>
-              Principal: <span className="text-zinc-200">{principalLabel}</span>
-            </p>
-            <p>
-              Resource owner: <span className="text-zinc-200">{ownerLabel}</span>
-            </p>
-            <p>
-              Expected status: <span className="text-zinc-200">{expected}</span>
-            </p>
-            <p>
-              Observed status: <span className="text-zinc-200">{observed}</span>
-            </p>
+            <p>Principal: <span className="text-slate-700">{principalLabel}</span></p>
+            <p>Resource owner: <span className="text-slate-700">{ownerLabel}</span></p>
+            <p>Expected status: <span className="text-slate-700">{expected}</span></p>
+            <p>Observed status: <span className="text-slate-700">{observed}</span></p>
             {ev["observed_body"] != null && (
-              <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-black/40 p-2 text-zinc-300">
+              <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-slate-50 p-2 text-slate-600">
                 {JSON.stringify(ev["observed_body"], null, 2)}
               </pre>
             )}
@@ -1148,393 +1325,339 @@ function VulnerabilityCard({ finding }: { finding: SecurityFinding }) {
 function SecurityMemorySection({ run }: { run: InspectionRun }) {
   const entries = run.memory?.entries ?? [];
   return (
-    <div
-      id="security-memory"
-      className="w-full rounded-md border border-amber-500/40 bg-zinc-950 p-5"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-mono text-xs uppercase tracking-widest text-amber-400">
-          SECURITY MEMORY
+    <div id="security-memory" className={`${CARD} flex h-full flex-col`}>
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-slate-900">Security Memory</h3>
+          <span className="text-xs text-slate-400">{entries.length} test{entries.length === 1 ? "" : "s"}</span>
+        </div>
+        <p className="mt-1 text-xs text-slate-500">
+          Verified security failures become permanent regression tests.
         </p>
-        <span className="font-mono text-[11px] text-emerald-400">
-          &ldquo;Verified security failures become permanent regression tests.&rdquo;
+      </div>
+      <div className="flex-1 space-y-2.5 p-4">
+        {entries.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-violet-200 bg-violet-50/40 p-4 text-center">
+            <p className="text-sm font-semibold text-violet-700">No Security Memory yet</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              This is the first inspection of this application. Every verified
+              failure becomes a test remembered for tomorrow.
+            </p>
+          </div>
+        ) : (
+          entries.map((entry) => (
+            <SecurityMemoryRow key={entry.fingerprint} entry={entry} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SecurityMemoryRow({ entry }: { entry: LibraryEntry }) {
+  const headers = entry.request.headers ?? {};
+  const safeHeaders = Object.entries(headers).filter(
+    ([name]) => !/authorization|cookie|token|session|secret|api[-_]?key/i.test(name),
+  );
+  const regressed = entry.current_status === "failed";
+  const passed = entry.current_status === "passed";
+  return (
+    <div className="rounded-lg border border-slate-200 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-xs font-bold text-violet-700">{entry.id}</span>
+        <span className={`${EYEBROW} ${regressed ? "text-red-600" : passed ? "text-green-600" : "text-slate-400"}`}>
+          {regressed ? "Regression" : passed ? "Verified" : "Pending"}
         </span>
       </div>
-      {entries.length === 0 ? (
-        <div className="mt-3 rounded-md border border-zinc-800 bg-black/40 p-4">
-          <p className="font-mono text-sm font-bold text-amber-300">
-            NO SECURITY MEMORY YET
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-            This is the first inspection of this application. Every verified
-            failure from this inspection becomes a test remembered for
-            tomorrow.
+      <p className="mt-1 text-sm leading-snug text-slate-700">{entry.title}</p>
+      <p className="mt-1 font-mono text-[11px] text-slate-500">
+        {entry.request.method} {entry.request.path}
+        {safeHeaders.map(([name, value]) => (
+          <span key={name} className="text-slate-400"> · {name}: {value}</span>
+        ))}
+      </p>
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+        <span>
+          Expected <span className="font-mono font-semibold text-slate-700">{entry.expected.status}</span>
+        </span>
+        {entry.invariant && (
+          <span className="truncate font-mono">{entry.invariant}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FindingsPanel({ verified }: { verified: SecurityFinding[] }) {
+  const crossUser = crossUserOf(verified);
+  const others = verified.filter((f) => {
+    const ev = f.evidence as Record<string, unknown>;
+    return ev["cross_user_access"] !== true;
+  });
+
+  if (verified.length === 0) {
+    return (
+      <div className={`${CARD} flex h-full flex-col`}>
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h3 className="text-base font-semibold text-slate-900">Verified Findings</h3>
+        </div>
+        <div className="flex-1 p-4">
+          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+            No verified vulnerabilities in this inspection.
           </p>
         </div>
-      ) : (
-        <div className="mt-3 flex flex-col gap-3">
-          {entries.map((entry) => {
-            const headers = entry.request.headers ?? {};
-            const safeHeaders = Object.entries(headers).filter(
-              ([name]) =>
-                !/authorization|cookie|token|session|secret|api[-_]?key/i.test(
-                  name,
-                ),
-            );
-            return (
-              <div
-                key={entry.fingerprint}
-                className="rounded-md border border-zinc-800 bg-black/40 p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-mono text-sm font-bold text-zinc-100">
-                    {entry.id}
-                  </p>
-                  <span
-                    className={`rounded-sm border px-2 py-0.5 font-mono text-[11px] font-bold ${
-                      entry.current_status === "failed"
-                        ? "border-red-500/50 bg-red-500/10 text-red-400"
-                        : entry.current_status === "passed"
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                          : "border-zinc-700 bg-zinc-900 text-zinc-400"
-                    }`}
-                  >
-                    {entry.severity.toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {crossUser.map((f) => (
+        <CrossUserCard key={f.id} finding={f} />
+      ))}
+      {others.length > 0 && (
+        <div className={`${CARD} overflow-hidden`}>
+          <div className="border-b border-slate-100 px-5 py-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">Verified Findings</h3>
+              <span className="text-xs text-slate-400">{others.length}</span>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {others.map((f) => (
+              <details key={f.id} className="group px-5 py-3">
+                <summary className="flex cursor-pointer select-none flex-wrap items-center gap-3">
+                  <SeverityBadge severity={f.severity} />
+                  <span className="min-w-0 flex-1 text-sm text-slate-800">{f.title}</span>
+                  <span className="hidden text-xs text-slate-400 sm:inline">
+                    {f.category.replace(/_/g, " ")}
                   </span>
-                </div>
-                <p className="mt-2 font-mono text-xs text-zinc-200">
-                  {entry.title}
-                </p>
-                <p className="mt-1 font-mono text-[11px] text-emerald-300">
-                  {entry.request.method} {entry.request.path}
-                  {safeHeaders.map(([name, value]) => (
-                    <span key={name} className="text-zinc-400">
-                      {" "}
-                      · {name}: {value}
-                    </span>
-                  ))}
-                </p>
-                {entry.invariant && (
-                  <p className="mt-1 font-mono text-[11px] text-zinc-400">
-                    Invariant: {entry.invariant}
-                  </p>
-                )}
-                <p className="mt-1 font-mono text-[11px] text-zinc-400">
-                  Expected: <span className="text-zinc-200">{entry.expected.status}</span>
-                </p>
-                <p className="mt-2 font-mono text-[11px] text-zinc-500">
-                  Lifecycle: Discovered{" "}
-                  {entry.first_detected_version
-                    ? `(${entry.first_detected_version})`
-                    : ""}{" "}
-                  →{" "}
-                  {entry.current_status === "passed"
-                    ? "Fix Verified"
-                    : entry.current_status === "failed"
-                      ? "Regression Detected"
-                      : "Pending replay"}
-                  {entry.last_replayed_version
-                    ? ` (${entry.last_replayed_version})`
-                    : ""}
-                </p>
-              </div>
-            );
-          })}
+                  <Chip tone="green">Verified</Chip>
+                </summary>
+                <FindingEvidence finding={f} />
+              </details>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function ReplayResults({
-  title,
-  results,
-  replayed,
-  passed,
-  regressions,
-  variant,
+// Lower technical area: deterministic checks + Nosana AI, both collapsible.
+function DeterministicPanel({
+  deterministic,
 }: {
-  title: string;
-  results: RegressionReplayResult[];
-  replayed: number;
-  passed: number;
-  regressions: number;
-  variant: "fixed" | "regression";
+  deterministic: DeterministicSection | undefined;
 }) {
-  const isFixed = variant === "fixed";
+  const checks = deterministic;
+  const countLabel = checks
+    ? `${checks.checks_executed} executed · ${checks.passed} passed · ${checks.issues} issues`
+    : "No checks";
   return (
-    <div
-      className={`w-full rounded-md border p-5 ${
-        isFixed
-          ? "border-emerald-500/40 bg-zinc-950"
-          : "border-red-500/50 bg-red-950/30"
-      }`}
-    >
-      <p
-        className={`font-mono text-xs uppercase tracking-widest ${
-          isFixed ? "text-emerald-400" : "text-red-400"
-        }`}
-      >
-        {title}
-      </p>
-      <div className="mt-3 grid grid-cols-3 gap-3">
-        <Metric label="Tests Replayed" value={replayed} />
-        <Metric
-          label="Passed"
-          value={passed}
-          tone={isFixed ? "green" : "default"}
-        />
-        <Metric
-          label="Regressions"
-          value={regressions}
-          tone={!isFixed && regressions > 0 ? "red" : "default"}
-        />
+    <div className={`${CARD} overflow-hidden`}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <h3 className="text-base font-semibold text-slate-900">Deterministic Checks</h3>
+        <Chip tone={checks && checks.issues > 0 ? "amber" : "green"}>{countLabel}</Chip>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
-        {results.map((item) => {
-          // Defensive composite key: entry ids are unique in the backend
-          // data, but the method/path suffix keeps React stable even if a
-          // legacy duplicate id ever reached the UI.
-          const replayKey = `${item.entry_id}-${item.method}-${item.path}`;
-          return (
-            <div
-              key={replayKey}
-              className={`rounded-md border p-3 ${
-                item.status === "regression"
-                  ? "border-red-500/60 bg-red-950/40"
-                  : "border-zinc-800 bg-black/40"
-              }`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-mono text-sm font-bold text-zinc-100">
-                  {item.entry_id}
-                </p>
-                <span
-                  className={`rounded-sm border px-2 py-0.5 font-mono text-[11px] font-bold ${
-                    item.status === "regression"
-                      ? "border-red-500/60 bg-red-500/10 text-red-400"
-                      : "border-emerald-500/60 bg-emerald-500/10 text-emerald-400"
-                  }`}
-                >
-                  {item.status === "regression"
-                    ? "🚨 REGRESSION"
-                    : item.status === "error"
-                      ? "⚠ REPLAY ERROR"
-                      : "🟢 PASSED"}
-                </span>
-              </div>
-              <p className="mt-2 font-mono text-xs text-zinc-200">
-                {item.title}
-              </p>
-              <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400 sm:grid-cols-2">
-                <p>
-                  Expected:{" "}
-                  <span className="text-zinc-200">{item.expected_status}</span>
-                </p>
-                <p>
-                  Observed:{" "}
-                  <span
-                    className={
-                      item.observed_status === item.expected_status
-                        ? "text-emerald-300"
-                        : "text-red-300"
-                    }
-                  >
-                    {item.observed_status != null
-                      ? item.observed_status
-                      : "n/a"}
-                  </span>
-                </p>
-              </div>
-              {item.error && (
-                <p className="mt-1 font-mono text-[11px] text-amber-400">
-                  {item.error}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {!checks || checks.checks_executed === 0 ? (
+        <p className="px-5 py-6 text-center text-sm text-slate-500">
+          No deterministic checks were executed in this inspection.
+        </p>
+      ) : (
+        <div className="p-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <th className="pb-2 pr-3 font-semibold">Severity</th>
+                <th className="pb-2 pr-3 font-semibold">Check</th>
+                <th className="pb-2 text-right font-semibold">Result</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {checks.results.map((f) => {
+                const issue = f.status === "verified";
+                return (
+                  <tr key={f.id}>
+                    <td className="py-2 pr-3"><SeverityBadge severity={f.severity} /></td>
+                    <td className="py-2 pr-3 text-slate-700">{f.title}</td>
+                    <td className="py-2 text-right">
+                      <Chip tone={issue ? "amber" : "green"}>
+                        {issue ? "Issue" : "Passed"}
+                      </Chip>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
 
-function TechnicalDetails({ run }: { run: InspectionRun }) {
-  const baseline = run.baseline?.assessment;
-  const context = run.baseline?.context ?? baseline?.discovery ?? null;
-  const sections: { title: string; body: ReactNode }[] = [];
-
-  if (context) {
-    sections.push({
-      title: "Application Discovery",
-      body: (
-        <div className="space-y-1 font-mono text-[11px] leading-relaxed text-zinc-400">
-          <p>
-            Name: <span className="text-zinc-200">{context.name}</span>
-          </p>
-          <p>
-            Framework: <span className="text-zinc-200">{context.framework || "unknown"}</span>
-          </p>
-          <p>
-            Runtime origin:{" "}
-            <span className="text-zinc-200">{context.runtime_origin}</span>
-          </p>
-          <p>
-            Routes:{" "}
-            <span className="text-zinc-200">
-              {context.routes.map((r) => `${r.method} ${r.path}`).join(", ") ||
-                "none"}
-            </span>
-          </p>
-          <p>
-            Discovery:{" "}
-            <span className="text-zinc-200">
-              {context.discovery_summary || "no summary"}
-            </span>
-          </p>
-        </div>
-      ),
-    });
-  }
-
-  if (baseline?.deterministic && baseline.deterministic.checks_executed > 0) {
-    sections.push({
-      title: "Deterministic Checks",
-      body: (
-        <div className="space-y-2 font-mono text-[11px]">
-          {baseline.deterministic.results.map((f) => (
-            <p key={f.id} className="leading-relaxed text-zinc-400">
-              <span
-                className={
-                  f.status === "verified"
-                    ? "font-bold text-red-400"
-                    : f.status === "error"
-                      ? "font-bold text-amber-400"
-                      : "text-emerald-400"
-                }
-              >
-                {f.status.toUpperCase()}
-              </span>{" "}
-              · {f.title}
-            </p>
-          ))}
-        </div>
-      ),
-    });
-  }
-
-  if (baseline?.ai_exploration) {
-    const ai = baseline.ai_exploration;
-    const unavailable = ai.status === "unavailable" || ai.status === "error";
-    sections.push({
-      title: "AI Exploration",
-      body: unavailable ? (
-        <div className="space-y-2 font-mono text-[11px]">
-          <p className="font-bold text-amber-400">⚠ AI Exploration Unavailable</p>
-          <p className="text-zinc-400">
-            Security Memory replay, deterministic checks, and discovery all
-            completed successfully — fresh AI hypothesis generation did not.
-          </p>
-          {ai.error_message && (
-            <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-amber-500/30 bg-black/40 p-2 text-amber-200/80">
-              {ai.error_message}
-            </pre>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2 font-mono text-[11px]">
-          <p className="text-zinc-400">
-            {AI_LABEL} · {ai.hypotheses_generated} analysis
-            {ai.hypotheses_generated === 1 ? "" : "es"} ·{" "}
-            {ai.executable_experiments} executable experiment
-            {ai.executable_experiments === 1 ? "" : "s"} ·{" "}
-            {ai.tests_executed} executed ·{" "}
-            <span className="text-red-400">{ai.verified_findings} verified</span>
-          </p>
-          {ai.results.map((item, index) => (
-            <p key={index} className="leading-relaxed text-zinc-400">
-              <span
-                className={
-                  item.verification === "verified"
-                    ? "font-bold text-red-400"
-                    : item.verification === "rejected" ||
-                        item.verification === "error"
-                      ? "text-amber-400"
-                      : "text-zinc-500"
-                }
-              >
-                [{item.verification.toUpperCase()}]
-              </span>{" "}
-              {item.title || item.hypothesis}
-            </p>
-          ))}
-        </div>
-      ),
-    });
-  }
-
-  sections.push({
-    title: "Security Memory",
-    body: (
-      <div className="space-y-1 font-mono text-[11px] text-zinc-400">
-        {run.memory && run.memory.entries.length > 0 ? (
-          run.memory.entries.map((e) => (
-            <p key={e.fingerprint} className="leading-relaxed">
-              <span className="font-bold text-zinc-200">{e.id}</span> ·{" "}
-              {e.request.method} {e.request.path} · expected {e.expected.status}{" "}
-              · current: {e.current_status || "not replayed"}
-            </p>
-          ))
+function NosanaAiPanel({ ai }: { ai: AiExplorationSection | undefined }) {
+  const unavailable = ai?.status === "unavailable" || ai?.status === "error";
+  return (
+    <div className={`${CARD} overflow-hidden`}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <h3 className="text-base font-semibold text-slate-900">{AI_LABEL} Exploration</h3>
+        {unavailable ? (
+          <Chip tone="amber">Unavailable</Chip>
         ) : (
-          <p>No Security Memory entries.</p>
+          ai && (
+            <Chip tone="slate">
+              {ai.verified_findings} verified
+            </Chip>
+          )
         )}
       </div>
-    ),
-  });
+      {unavailable ? (
+        <div className="p-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-700">
+              {AI_LABEL} Exploration Unavailable
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-700/80">
+              Security Memory replay, deterministic checks, and discovery
+              completed successfully — fresh AI hypothesis generation did not.
+            </p>
+            {ai?.error_message && (
+              <pre className="mt-2 max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-white p-2 font-mono text-[11px] text-amber-700">
+                {ai.error_message}
+              </pre>
+            )}
+          </div>
+        </div>
+      ) : !ai ? (
+        <p className="px-5 py-6 text-center text-sm text-slate-500">
+          No {AI_LABEL} exploration data for this inspection.
+        </p>
+      ) : (
+        <div className="p-4">
+          <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+            <span>{ai.hypotheses_generated} hypothesis{ai.hypotheses_generated === 1 ? "" : "es"}</span>
+            <span>{ai.executable_experiments} experiment{ai.executable_experiments === 1 ? "" : "s"}</span>
+            <span>{ai.tests_executed} executed</span>
+            <span className="font-semibold text-green-600">{ai.verified_findings} verified</span>
+            <span>{ai.hypotheses_rejected} rejected</span>
+          </div>
+          {ai.results.length > 0 ? (
+            <div className="space-y-1.5">
+              {ai.results.map((item, index) => (
+                <div key={index} className="flex items-start gap-2 text-xs text-slate-600">
+                  <span
+                    className={`mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                      item.verification === "verified"
+                        ? "bg-green-500"
+                        : item.verification === "rejected" || item.verification === "error"
+                          ? "bg-amber-500"
+                          : "bg-slate-300"
+                    }`}
+                  />
+                  <span>{item.title || item.hypothesis}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No hypotheses were generated.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  const rawResponses: { title: string; data: unknown }[] = [];
-  if (run.baseline) rawResponses.push({ title: "Baseline assessment", data: run.baseline });
-  if (run.fixed) rawResponses.push({ title: "Fix verification assessment", data: run.fixed });
-  if (run.regression) rawResponses.push({ title: "Regression assessment", data: run.regression });
-  if (run.saved) rawResponses.push({ title: "Security Memory save", data: run.saved });
+// Dense technical details, collapsed by default.
+function DenseTechnical({ run }: { run: InspectionRun }) {
+  const baseline = run.baseline?.assessment;
+  const context = run.baseline?.context ?? baseline?.discovery ?? null;
 
   return (
-    <div
-      id="technical-details"
-      className="flex w-full flex-col gap-3"
-    >
-      <p className="font-mono text-center text-xs uppercase tracking-widest text-zinc-500">
-        TECHNICAL DETAILS
-      </p>
-      {sections.map((section) => (
-        <details
-          key={section.title}
-          className="w-full rounded-md border border-zinc-800 bg-zinc-950"
+    <details id="technical-details" className={`${CARD} group overflow-hidden`}>
+      <summary className="flex cursor-pointer select-none items-center justify-between px-5 py-4">
+        <span className="text-base font-semibold text-slate-900">Technical Details</span>
+        <svg
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-180"
+          aria-hidden="true"
         >
-          <summary className="cursor-pointer select-none px-4 py-3 font-mono text-xs font-semibold text-zinc-300">
-            {section.title}
-          </summary>
-          <div className="border-t border-zinc-800 px-4 py-3">{section.body}</div>
-        </details>
-      ))}
-      <details className="w-full rounded-md border border-zinc-800 bg-zinc-950">
-        <summary className="cursor-pointer select-none px-4 py-3 font-mono text-xs font-semibold text-zinc-300">
-          Raw Assessment Responses
-        </summary>
-        <div className="space-y-3 border-t border-zinc-800 px-4 py-3">
-          {rawResponses.map((raw) => (
-            <div key={raw.title}>
-              <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-                {raw.title}
-              </p>
-              <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-black/40 p-3 font-mono text-[10px] leading-relaxed text-zinc-400">
-                {JSON.stringify(raw.data, null, 2)}
-              </pre>
+          <path fillRule="evenodd" d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z" clipRule="evenodd" />
+        </svg>
+      </summary>
+      <div className="space-y-3 border-t border-slate-100 p-5">
+        {context && (
+          <details className="rounded-lg border border-slate-200">
+            <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-medium text-slate-800">
+              Application Discovery
+            </summary>
+            <div className="space-y-1 border-t border-slate-100 px-4 py-3 font-mono text-[11px] leading-relaxed text-slate-500">
+              <p>Name: <span className="text-slate-700">{context.name}</span></p>
+              <p>Framework: <span className="text-slate-700">{context.framework || "unknown"}</span></p>
+              <p>Runtime origin: <span className="text-slate-700">{context.runtime_origin}</span></p>
+              <p>Routes: <span className="text-slate-700">
+                {context.routes.map((r) => `${r.method} ${r.path}`).join(", ") || "none"}
+              </span></p>
+              <p>Discovery: <span className="text-slate-700">{context.discovery_summary || "no summary"}</span></p>
             </div>
-          ))}
-        </div>
-      </details>
-    </div>
+          </details>
+        )}
+
+        <details className="rounded-lg border border-slate-200">
+          <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-medium text-slate-800">
+            Security Memory Details
+          </summary>
+          <div className="space-y-1 border-t border-slate-100 px-4 py-3 font-mono text-[11px] text-slate-500">
+            {run.memory && run.memory.entries.length > 0 ? (
+              run.memory.entries.map((e) => (
+                <p key={e.fingerprint} className="leading-relaxed">
+                  <span className="font-semibold text-slate-700">{e.id}</span> · {e.request.method} {e.request.path} · expected {e.expected.status} · current: {e.current_status || "not replayed"}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm">No Security Memory entries.</p>
+            )}
+          </div>
+        </details>
+
+        <details className="rounded-lg border border-slate-200">
+          <summary className="cursor-pointer select-none px-4 py-2.5 text-sm font-medium text-slate-800">
+            Raw Assessment Responses
+          </summary>
+          <div className="space-y-3 border-t border-slate-100 px-4 py-3">
+            {[
+              { title: "Baseline assessment", data: run.baseline },
+              { title: "Fix verification assessment", data: run.fixed },
+              { title: "Regression assessment", data: run.regression },
+              { title: "Security Memory save", data: run.saved },
+            ].map(
+              (raw) =>
+                raw.data && (
+                  <div key={raw.title}>
+                    <p className={`${EYEBROW} mb-1 text-slate-400`}>{raw.title}</p>
+                    <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-slate-50 p-3 font-mono text-[10px] leading-relaxed text-slate-600">
+                      {JSON.stringify(raw.data, null, 2)}
+                    </pre>
+                  </div>
+                ),
+            )}
+          </div>
+        </details>
+      </div>
+    </details>
+  );
+}
+
+function Landing({ onReset }: { onReset: () => void }) {
+  return (
+    <button
+      onClick={onReset}
+      className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+    >
+      Inspect Another Application
+    </button>
   );
 }
 
@@ -1549,10 +1672,7 @@ function ResultView({
   const fixedReg = run.fixed?.assessment.regression;
   const regressionReg = run.regression?.assessment.regression;
   const verified = baseline?.findings.filter((f) => f.status === "verified") ?? [];
-  const crossUserFindings = verified.filter((f) => {
-    const ev = f.evidence as Record<string, unknown>;
-    return ev["cross_user_access"] === true;
-  });
+  const crossUserFindings = crossUserOf(verified);
   // Real cross-user findings drive the headline count when present (the
   // regression-demo story); otherwise every verified finding counts.
   const verifiedCount =
@@ -1566,116 +1686,243 @@ function ResultView({
   const regressionsDetected = regressionReg
     ? regressionReg.regressions
     : baseline?.regression.regressions ?? 0;
-
+  const testsReplayed = (fixedReg && fixedReg.tests_replayed > 0)
+    ? fixedReg.tests_replayed
+    : baseline?.regression.tests_replayed ?? 0;
   const hasStageError = Object.keys(run.stageErrors).length > 0;
 
+  // Overall status (red stays rare).
+  let status: {
+    tone: "detect" | "verify" | "discover" | "neutral";
+    title: string;
+    message: string;
+    detail?: string;
+  };
+  if (regressionsDetected > 0) {
+    status = {
+      tone: "detect",
+      title: "Security Regression Detected",
+      message: `${regressionsDetected} previously fixed security condition${regressionsDetected === 1 ? "" : "s"} have returned.`,
+      detail: `${regressionsDetected} regression${regressionsDetected === 1 ? "" : "s"} require attention.`,
+    };
+  } else if (testsReplayed > 0 && fixVerifiedAllClear(run)) {
+    status = {
+      tone: "verify",
+      title: "Fix Verified",
+      message: "All stored Security Memory tests held against the fixed application.",
+    };
+  } else if (verifiedCount > 0) {
+    status = {
+      tone: "discover",
+      title: "Verified Vulnerabilities Found",
+      message: `${verifiedCount} verified security finding${verifiedCount === 1 ? "" : "s"} discovered in this application.`,
+    };
+  } else {
+    status = {
+      tone: "neutral",
+      title: "Inspection Complete",
+      message: "No verified security issues were detected.",
+    };
+  }
+
+  const lifecycleSteps = [
+    {
+      label: "Discover",
+      value: `${verifiedCount}`,
+      caption: crossUserFindings.length > 0
+        ? "Cross-user access vulnerability found"
+        : verifiedCount > 0
+          ? "verified findings"
+          : "no vulnerability found",
+      accent: "blue" as const,
+    },
+    {
+      label: "Remember",
+      value: `${memoryCount}`,
+      caption: memoryCount > 0 ? "tests kept in Security Memory" : "nothing to remember yet",
+      accent: "violet" as const,
+    },
+    {
+      label: "Verify",
+      value: testsReplayed > 0 ? `${fixesVerified}/${testsReplayed}` : "—",
+      caption: testsReplayed > 0 ? "passed after the fix" : "no fix replay available",
+      accent: "green" as const,
+    },
+    {
+      label: "Detect",
+      value: `${regressionsDetected}`,
+      caption: regressionsDetected > 0 ? "regressions caught" : "no regression",
+      accent: regressionsDetected > 0 ? ("red" as const) : ("green" as const),
+    },
+  ];
+
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-6 py-12">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6 lg:px-10">
       {/* Header */}
-      <div className="flex w-full flex-col items-center gap-2">
-        <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
-          TARGET
-        </p>
-        <h2 className="font-mono text-2xl font-bold text-zinc-100">
-          {run.application?.origin || run.url}
-        </h2>
-        {run.target && (
-          <p className="font-mono text-[11px] text-violet-300">
-            {run.target.name}
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <Brand />
+        <div className="flex items-center gap-3">
+          <Chip tone={regressionsDetected > 0 ? "red" : "green"}>
+            Inspection {regressionsDetected > 0 ? "complete · regressions found" : "complete"}
+          </Chip>
+          <Landing onReset={onReset} />
+        </div>
+      </header>
+
+      {/* Report intro */}
+      <div className="mt-8">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Security Regression Report
+        </h1>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+          <span className="font-mono text-[13px] text-slate-700">
+            {run.application?.origin || run.url}
+          </span>
+          {run.target?.name && (
+            <span className="text-slate-400">· {run.target.name}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-6">
+        {/* Overall status */}
+        <OverallStatus status={status} />
+
+        {/* Stage errors must never blank the screen */}
+        {hasStageError && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+            <div className="text-sm">
+              <p className="font-semibold text-amber-700">
+                Some stages could not complete
+              </p>
+              {Object.entries(run.stageErrors).map(([key, detail]) => (
+                <p key={key} className="mt-0.5 text-xs leading-relaxed text-amber-700/80">
+                  <span className="font-semibold uppercase">{key}</span>: {detail}
+                </p>
+              ))}
+              <p className="mt-1 text-xs text-amber-700/70">
+                All earlier successful results are preserved below.
+              </p>
+            </div>
+          </div>
         )}
-      </div>
 
-      <ResultBanner run={run} />
+        {/* Summary metrics — one row on desktop */}
+        <section>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MetricCard
+              label="Verified Vulnerabilities"
+              value={`${verifiedCount}`}
+              accent={verifiedCount > 0 ? "blue" : "blue"}
+            />
+            <MetricCard
+              label="Security Memory"
+              value={`${memoryCount}`}
+              hint="tests"
+              accent="violet"
+            />
+            <MetricCard
+              label="Fixes Verified"
+              value={testsReplayed > 0 ? `${fixesVerified}/${testsReplayed}` : "0"}
+              accent="green"
+            />
+            <MetricCard
+              label="Regressions"
+              value={`${regressionsDetected}`}
+              accent={regressionsDetected > 0 ? "red" : "green"}
+            />
+          </div>
+        </section>
 
-      {/* Stage errors must never blank the screen */}
-      {hasStageError && (
-        <div className="w-full rounded-md border border-amber-500/40 bg-amber-950/30 p-4 font-mono text-sm text-amber-300">
-          <p className="mb-1 font-semibold text-amber-400">
-            ⚠ Some stages could not complete
+        {/* Lifecycle — one row on desktop */}
+        <LifecycleStepper steps={lifecycleSteps} />
+
+        {/* Fix Verification vs Regression Detection */}
+        <section>
+          <SectionHeading eyebrow="Vulnerability fixed, then returned">
+            Fix Verification vs Regression Detection
+          </SectionHeading>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ReplayPanel
+              title="Fix Verification"
+              variant="fixed"
+              results={fixedReg?.results ?? []}
+              replayed={fixedReg?.tests_replayed ?? 0}
+              passed={fixedReg?.passed ?? 0}
+              regressions={fixedReg?.regressions ?? 0}
+            />
+            <ReplayPanel
+              title="Regression Detection"
+              variant="regression"
+              results={regressionReg?.results ?? []}
+              replayed={regressionReg?.tests_replayed ?? 0}
+              passed={regressionReg?.passed ?? 0}
+              regressions={regressionReg?.regressions ?? 0}
+            />
+          </div>
+        </section>
+
+        {/* Findings + Security Memory */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <SectionHeading>Verified Findings</SectionHeading>
+            <FindingsPanel verified={verified} />
+          </div>
+          <div>
+            <SectionHeading>Security Memory</SectionHeading>
+            <SecurityMemorySection run={run} />
+          </div>
+        </section>
+
+        {/* Lower technical area */}
+        <section>
+          <SectionHeading eyebrow="Supporting detail">Technical Analysis</SectionHeading>
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <DeterministicPanel deterministic={baseline?.deterministic} />
+            <NosanaAiPanel ai={baseline?.ai_exploration} />
+          </div>
+        </section>
+
+        <DenseTechnical run={run} />
+
+        {/* Footer actions */}
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6">
+          <p className="text-sm text-slate-500">
+            Core concept: BreakTrace found a vulnerability, remembered it,
+            verified a fix, and caught it when it returned.
           </p>
-          {Object.entries(run.stageErrors).map(([key, detail]) => (
-            <p key={key} className="mt-1 text-xs leading-relaxed">
-              <span className="font-bold">{key.toUpperCase()}</span>: {detail}
-            </p>
-          ))}
-          <p className="mt-2 text-xs text-amber-200/70">
-            All earlier successful results are preserved below.
-          </p>
-        </div>
-      )}
-
-      {/* Summary cards */}
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="Verified Vulnerabilities" value={verifiedCount} tone={verifiedCount > 0 ? "red" : "default"} />
-        <Metric label="Security Memory Tests" value={memoryCount} />
-        <Metric label="Fixes Verified" value={fixesVerified} tone={fixesVerified > 0 ? "green" : "default"} />
-        <Metric label="Regressions Detected" value={regressionsDetected} tone={regressionsDetected > 0 ? "red" : "default"} />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => scrollToId("security-memory")}
+              className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              View Security Memory
+            </button>
+            <button
+              onClick={() => scrollToId("technical-details")}
+              className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              Technical Details
+            </button>
+            <button
+              onClick={onReset}
+              className="inline-flex h-10 items-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+            >
+              Inspect Another Application
+            </button>
+          </div>
+        </footer>
       </div>
-
-      <LifecycleStory run={run} />
-
-      {/* Vulnerability cards */}
-      {verified.length > 0 && (
-        <div className="flex w-full flex-col gap-3">
-          <p className="font-mono text-center text-xs uppercase tracking-widest text-red-400">
-            VULNERABILITIES FOUND
-          </p>
-          {verified.map((f) => (
-            <VulnerabilityCard key={f.id} finding={f} />
-          ))}
-        </div>
-      )}
-
-      <SecurityMemorySection run={run} />
-
-      {/* Fix verification + regression replay (real replay data) */}
-      {fixedReg && fixedReg.tests_replayed > 0 && (
-        <ReplayResults
-          title="FIX VERIFICATION"
-          results={fixedReg.results}
-          replayed={fixedReg.tests_replayed}
-          passed={fixedReg.passed}
-          regressions={fixedReg.regressions}
-          variant="fixed"
-        />
-      )}
-      {regressionReg && regressionReg.tests_replayed > 0 && (
-        <ReplayResults
-          title="🚨 REGRESSION DETECTION"
-          results={regressionReg.results}
-          replayed={regressionReg.tests_replayed}
-          passed={regressionReg.passed}
-          regressions={regressionReg.regressions}
-          variant="regression"
-        />
-      )}
-
-      {/* Actions */}
-      <div className="mt-2 flex flex-wrap justify-center gap-2">
-        <button
-          onClick={onReset}
-          className="h-12 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-8 font-mono text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
-        >
-          [ Inspect Another Application ]
-        </button>
-        <button
-          onClick={() => scrollToId("security-memory")}
-          className="h-12 rounded-md border border-amber-500/40 bg-amber-500/10 px-6 font-mono text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-500/20"
-        >
-          [ View Security Memory ]
-        </button>
-        <button
-          onClick={() => scrollToId("technical-details")}
-          className="h-12 rounded-md border border-zinc-600 bg-zinc-900 px-6 font-mono text-sm font-semibold text-zinc-200 transition-colors hover:bg-zinc-800"
-        >
-          [ View Technical Details ]
-        </button>
-      </div>
-
-      <TechnicalDetails run={run} />
     </div>
   );
+}
+
+// True when the fix stage replayed stored tests and every one passed.
+function fixVerifiedAllClear(run: InspectionRun): boolean {
+  const fixedReg = run.fixed?.assessment.regression;
+  if (!fixedReg || fixedReg.tests_replayed === 0) return false;
+  return fixedReg.regressions === 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -1716,7 +1963,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-1 flex-col items-center px-6">
+    <main className="flex flex-1 flex-col">
       {phase === "landing" && (
         <LandingView
           url={url}
@@ -1726,7 +1973,11 @@ export default function Home() {
           error={inspectError}
         />
       )}
-      {phase === "inspecting" && <InspectionProgress stages={stages} />}
+      {phase === "inspecting" && (
+        <div className="px-6">
+          <InspectionProgress stages={stages} />
+        </div>
+      )}
       {phase === "result" && run && <ResultView run={run} onReset={reset} />}
     </main>
   );
