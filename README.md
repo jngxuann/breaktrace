@@ -1433,8 +1433,3 @@ Only use BreakTrace against applications, environments, repositories, and system
 
 ---
 
-# BreakTrace
-
-### Find it once. Fix it once. Remember it forever.
-
-**Discover → Remember → Verify → Detect**
